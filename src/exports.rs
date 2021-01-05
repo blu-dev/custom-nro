@@ -2,12 +2,12 @@ use smash::{app::Fighter, phx::Hash40};
 use smash::lua2cpp::*;
 use smash::app::{BattleObjectModuleAccessor, BattleObject};
 use smash::lua_State;
+use smash::lib;
 
 pub struct FighterDonkey {
     pub fighter_common: L2CFighterCommon,
     reserved: [u8; 0x228 - 0xE0]
 }
-
 pub mod vtable {
     pub unsafe fn make_new(original: *const *mut skyline::libc::c_void, length: usize) -> *mut *mut skyline::libc::c_void {
         let new_vtable = std::alloc::alloc(std::alloc::Layout::from_size_align(length * std::mem::size_of::<*mut skyline::libc::c_void>(), 8).unwrap()) as *mut *mut skyline::libc::c_void;
@@ -36,6 +36,14 @@ impl FighterDonkey {
     }
 
     unsafe extern "C" fn setup_status_scripts(fighter: &mut FighterDonkey) {
+        // Set count of status array
+        let this_ptr: *mut u8 = fighter as *mut FighterDonkey as *mut u8;
+        let some_l2cval: *mut lib::L2CValue = (this_ptr as u64 + 200) as *mut lib::L2CValue;
+        let other_l2cval: &mut lib::L2CValue = &mut (*some_l2cval)[0xC];
+        other_l2cval.inner.raw = 0x1F3;
+        
+        L2CAgentBase::reserve_status_data_array(&mut *(this_ptr as *mut L2CAgentBase), 0x1F3);
+        fighter.fighter_common.sub_set_fighter_common_table();
     }
 
     pub fn new(obj: &mut BattleObject, boma: &mut BattleObjectModuleAccessor, state: &mut lua_State) -> FighterDonkey {
